@@ -14,39 +14,59 @@
 
     {% if 'user_id' in session %}
     <!-- Display Task Manager for logged-in users -->
-    <p>Welcome, {{ username }}!</p>
+    <p>Welcome, {{ username if username else 'Guest' }}!</p>
     <a href="{{ url_for('logout') }}">Logout</a>
 
     <!-- Form to add a new task -->
-    <form action="/add" method="POST">
-      <input type="text" name="title" placeholder="Add new task" required>
+    <form action="{{ url_for('add_task') }}" method="POST">
+      <label for="title">Task Title:</label>
+      <input type="text" id="title" name="title" required>
+
+      <label for="description">Description:</label>
+      <textarea id="description" name="description"></textarea>
+
+      <label for="priority">Priority:</label>
+      <select id="priority" name="priority" required>
+        <option value="Low">Low</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="High">High</option>
+      </select>
+
       <button type="submit">Add Task</button>
     </form>
 
-    <!-- Form to update task completion status -->
-    <form action="/update" method="POST" id="updateForm">
-      <ul>
+    <!-- Task List -->
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Description</th>
+          <th>Priority</th>
+          <th>Actions</th>
+          <th>Complete</th>
+        </tr>
+      </thead>
+      <tbody>
         {% for task in tasks %}
-        <li>
-          <div>
-            <!-- Checkbox for task completion -->
-            <input type="checkbox" id="task-{{ task.id }}" name="completed_tasks" value="{{ task.id }}" {% if
-              task.is_completed %}checked{% endif %}>
-            <!-- Label for the task title -->
-            <label for="task-{{ task.id }}" class="task-title">
-              {% if task.is_completed %}
-              <span class="completed">{{ task.title }}</span>
-              {% else %}
-              {{ task.title }}
-              {% endif %}
-            </label>
-          </div>
-          <a href="/delete/{{ task.id }}">Delete</a>
-        </li>
+        <tr>
+          <td>{{ task.title }}</td>
+          <td>{{ task.description }}</td>
+          <td>{{ task.priority }}</td>
+          <td>
+            <a href="{{ url_for('edit_task', task_id=task.id) }}">Edit</a>
+            <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="display: inline;">
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+          <td>
+            <form action="{{ url_for('complete_task', task_id=task.id) }}" method="POST" style="display: inline;">
+              <input type="checkbox" onchange="this.form.submit()" {% if task.is_completed %}checked{% endif %}>
+            </form>
+          </td>
+        </tr>
         {% endfor %}
-      </ul>
-      <button type="submit" style="display: none;">Update Tasks</button>
-    </form>
+      </tbody>
+    </table>
 
     {% else %}
     <!-- Display Login Form for guests -->

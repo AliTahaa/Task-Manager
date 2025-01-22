@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -22,9 +22,15 @@ class User(db.Model):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    is_completed = db.Column(db.Boolean, default=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    priority = db.Column(db.Enum('Low', 'Medium', 'High'), nullable=False, default='Medium')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)  # Add this line
+
+    def __repr__(self):
+        return f"<Task {self.title}, Priority: {self.priority}>"
+
 
 @app.route('/')
 def index():
@@ -32,35 +38,33 @@ def index():
 
 @app.route('/add', methods=['POST'])
 def add_task():
+    if 'user_id' not in session:
+        flash('Please log in to add a task.', 'warning')
+        return redirect(url_for('login'))
+
     title = request.form['title']
-    new_task = Task(title=title, user_id=session['user_id'])
-    db.session.add(new_task)  # Add task to the session
-    db.session.commit()  # Commit the transaction
-    return redirect(url_for('dashboard'))  # Redirect to the index page
+    description = request.form.get('description', '')
+    priority = request.form['priority']
+    user_id = session['user_id']
+
+    new_task = Task(title=title, description=description, priority=priority, user_id=user_id)
+    db.session.add(new_task)
+    db.session.commit()
+
+    flash('Task added successfully!', 'success')
+    return redirect(url_for('dashboard'))
 
 
-@app.route('/update', methods=['POST'])
-def update_tasks():
-    completed_task_ids = request.form.getlist('completed_tasks')  # Get the selected tasks
-    user_id = session['user_id']  # Get the current user's ID
-    tasks = Task.query.filter_by(user_id=user_id).all()  # Filter tasks by the current user
-
-    for task in tasks:
-        if str(task.id) in completed_task_ids:
-            task.is_completed = True
-        else:
-            task.is_completed = False
-
-    db.session.commit()  # Commit the updates
-    return redirect(url_for('dashboard'))  # Redirect to the index page
 
 
-@app.route('/delete/<int:id>')
-def delete_task(id):
-    task_to_delete = Task.query.get_or_404(id)  # Fetch the task to delete
-    db.session.delete(task_to_delete)  # Delete the task from the session
-    db.session.commit()  # Commit the transaction
-    return redirect(url_for('dashboard'))  # Redirect to the index page
+
+@app.route('/delete_task/<int:task_id>', methods=['POST'])
+def delete_task(task_id):
+    task = Task.query.get(task_id)
+    if task:
+        db.session.delete(task)
+        db.session.commit()
+    return redirect(url_for('dashboard'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -103,10 +107,56 @@ def login():
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
+        flash('Please log in to view your dashboard.', 'warning')
         return redirect(url_for('login'))
-    tasks = Task.query.filter_by(user_id=session['user_id']).all()
-    username = session.get('username')  # Retrieve username from session
-    return render_template('index.html', tasks=tasks, username=username)
+
+    # Use positional arguments for `case` whens
+    tasks = Task.query.filter_by(user_id=session['user_id']).order_by(
+        db.case(
+            (Task.priority == 'High', 1),
+            (Task.priority == 'Medium', 2),
+            (Task.priority == 'Low', 3)
+        )
+    ).all()
+
+    username = session.get('username')
+    return render_template('index.html', username=username, tasks=tasks)
+
+
+@app.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
+def edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    if request.method == 'POST':
+        task.title = request.form['title']
+        task.description = request.form.get('description', '')
+        task.priority = request.form['priority']
+        db.session.commit()
+
+        flash('Task updated successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('edit_task.html', task=task)
+
+
+@app.route('/complete_task/<int:task_id>', methods=['POST'])
+def complete_task(task_id):
+    if 'user_id' not in session:
+        flash('Please log in to complete tasks.', 'warning')
+        return redirect(url_for('login'))
+
+    # Fetch the task
+    task = Task.query.get(task_id)
+    if task and task.user_id == session['user_id']:
+        # Toggle the completed status
+        task.is_completed = not task.is_completed
+        db.session.commit()  # Save the change to the database
+        flash('Task updated successfully!', 'success')
+    else:
+        flash('Task not found or unauthorized action.', 'danger')
+
+    return redirect(url_for('dashboard'))
+
 
 
 @app.route('/logout')
