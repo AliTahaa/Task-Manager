@@ -14,7 +14,7 @@
 
     {% if 'user_id' in session %}
     <!-- Display Task Manager for logged-in users -->
-    <p>Welcome! You are logged in.</p>
+    <p>Welcome, {{ username }}!</p>
     <a href="{{ url_for('logout') }}">Logout</a>
 
     <!-- Form to add a new task -->

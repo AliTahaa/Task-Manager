@@ -92,6 +92,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
+            session['username'] = user.username  # Store username in session
             return redirect(url_for('dashboard'))
         else:
             return "Invalid email or password!", 400
@@ -104,7 +105,8 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     tasks = Task.query.filter_by(user_id=session['user_id']).all()
-    return render_template('index.html', tasks=tasks)
+    username = session.get('username')  # Retrieve username from session
+    return render_template('index.html', tasks=tasks, username=username)
 
 
 @app.route('/logout')
