@@ -59,7 +59,7 @@ project-folder/
 │   ├── script.js             # JavaScript for interactivity
 │   ├── styles.css            # CSS for styling
 │
-├── static/
+├── instance/
 │   ├── tasks.db               # MySQL database
 ```
 
@@ -111,14 +111,14 @@ python app.py
 
 ## Screenshots
 
-### Home Page (Logged In)
-![Home Page](assets/home-page.png)
+### Register Page
+![Register Page](https://github.com/user-attachments/assets/3471991d-8934-43be-be2f-7541a1f63bd2)
 
 ### Login Page
-![Login Page](assets/login-page.png)
+![Login Page](https://github.com/user-attachments/assets/1df200fd-29c2-4218-b2e2-f1fd0ab68cba)
 
 ### Task List
-![Task List](assets/task-list.png)
+![Task List](https://github.com/user-attachments/assets/790b785b-c4e1-4812-8aa3-49a65c5d7536)
 
 ---
 
